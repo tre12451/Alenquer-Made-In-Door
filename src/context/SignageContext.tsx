@@ -114,8 +114,6 @@ interface SignageContextType {
   isSupabaseConnected: boolean;
   isSyncingWithSupabase: boolean;
   syncWithSupabase: () => Promise<void>;
-  isSupabaseModalOpen: boolean;
-  setIsSupabaseModalOpen: (open: boolean) => void;
 }
 
 const SignageContext = createContext<SignageContextType | undefined>(undefined);
@@ -179,8 +177,6 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isAddScreenOpen, setIsAddScreenOpen] = useState<boolean>(false);
   const [isUploadMediaOpen, setIsUploadMediaOpen] = useState<boolean>(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState<boolean>(false);
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
-
   // Supabase connection state
   const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
   const [isSyncingWithSupabase, setIsSyncingWithSupabase] = useState<boolean>(false);
@@ -247,7 +243,6 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const creds = getSupabaseCredentials();
     if (!creds.url || !creds.key) {
       setIsSupabaseConnected(false);
-      setIsSupabaseModalOpen(true);
       return;
     }
 
@@ -282,10 +277,8 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       setIsSupabaseConnected(true);
-      showToast('⚡ Dados sincronizados com o Supabase com sucesso!');
     } catch (err: any) {
       console.error('Erro ao sincronizar com Supabase:', err);
-      showToast('Aviso: Falha ao carregar dados do Supabase. Verifique suas credenciais.');
     } finally {
       setIsSyncingWithSupabase(false);
     }
@@ -606,8 +599,6 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isSupabaseConnected,
         isSyncingWithSupabase,
         syncWithSupabase,
-        isSupabaseModalOpen,
-        setIsSupabaseModalOpen,
       }}
     >
       {children}

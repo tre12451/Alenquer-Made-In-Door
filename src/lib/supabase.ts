@@ -1,19 +1,13 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { ScreenDevice, MediaItem, Playlist, Branch, EmergencyBroadcast, SignageSettings } from '../types';
 
-const STORAGE_KEY_URL = 'mediahub_supabase_url';
-const STORAGE_KEY_KEY = 'mediahub_supabase_anon_key';
-
 export function getSupabaseCredentials(): { url: string; key: string } {
   const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
   const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 
-  const storedUrl = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_URL) || '' : '';
-  const storedKey = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_KEY) || '' : '';
-
   return {
-    url: storedUrl || envUrl,
-    key: storedKey || envKey,
+    url: envUrl,
+    key: envKey,
   };
 }
 
