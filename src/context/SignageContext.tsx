@@ -22,6 +22,14 @@ import {
   SYSTEM_USERS,
   DEFAULT_SETTINGS,
 } from '../data/mockData';
+import {
+  getSupabaseClient,
+  getSupabaseCredentials,
+  fetchRealScreensFromSupabase,
+  fetchRealMediaFromSupabase,
+  fetchRealPlaylistsFromSupabase,
+  fetchRealEmergencyFromSupabase,
+} from '../lib/supabase';
 
 export type ActiveView =
   | 'dashboard'
@@ -101,6 +109,13 @@ interface SignageContextType {
   // Toast notifications
   toastMessage: string | null;
   showToast: (msg: string) => void;
+
+  // Supabase Real-time Sync
+  isSupabaseConnected: boolean;
+  isSyncingWithSupabase: boolean;
+  syncWithSupabase: () => Promise<void>;
+  isSupabaseModalOpen: boolean;
+  setIsSupabaseModalOpen: (open: boolean) => void;
 }
 
 const SignageContext = createContext<SignageContextType | undefined>(undefined);
@@ -164,6 +179,11 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isAddScreenOpen, setIsAddScreenOpen] = useState<boolean>(false);
   const [isUploadMediaOpen, setIsUploadMediaOpen] = useState<boolean>(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState<boolean>(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
+
+  // Supabase connection state
+  const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
+  const [isSyncingWithSupabase, setIsSyncingWithSupabase] = useState<boolean>(false);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -221,6 +241,90 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setLogs(prev => [newLog, ...prev]);
   };
+
+  // Supabase real-time synchronization
+  const syncWithSupabase = async () => {
+    const creds = getSupabaseCredentials();
+    if (!creds.url || !creds.key) {
+      setIsSupabaseConnected(false);
+      setIsSupabaseModalOpen(true);
+      return;
+    }
+
+    setIsSyncingWithSupabase(true);
+    try {
+      const client = getSupabaseClient();
+      if (!client) {
+        setIsSupabaseConnected(false);
+        setIsSyncingWithSupabase(false);
+        return;
+      }
+
+      // Fetch real data from Supabase tables in parallel
+      const [realScreens, realMedia, realPlaylists, realEmergency] = await Promise.all([
+        fetchRealScreensFromSupabase(),
+        fetchRealMediaFromSupabase(),
+        fetchRealPlaylistsFromSupabase(),
+        fetchRealEmergencyFromSupabase(),
+      ]);
+
+      if (realScreens && realScreens.length > 0) {
+        setScreens(realScreens);
+      }
+      if (realMedia && realMedia.length > 0) {
+        setMedia(realMedia);
+      }
+      if (realPlaylists && realPlaylists.length > 0) {
+        setPlaylists(realPlaylists);
+      }
+      if (realEmergency) {
+        setEmergencyAlert(realEmergency);
+      }
+
+      setIsSupabaseConnected(true);
+      showToast('⚡ Dados sincronizados com o Supabase com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao sincronizar com Supabase:', err);
+      showToast('Aviso: Falha ao carregar dados do Supabase. Verifique suas credenciais.');
+    } finally {
+      setIsSyncingWithSupabase(false);
+    }
+  };
+
+  // On mount: check credentials and connect
+  useEffect(() => {
+    const creds = getSupabaseCredentials();
+    if (creds.url && creds.key) {
+      syncWithSupabase();
+    }
+
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    // Supabase Realtime channel for live updates across displays
+    const channel = client
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'screens' }, () => {
+        fetchRealScreensFromSupabase().then(res => {
+          if (res.length > 0) setScreens(res);
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'emergency_broadcasts' }, () => {
+        fetchRealEmergencyFromSupabase().then(alert => {
+          if (alert) setEmergencyAlert(alert);
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'playlists' }, () => {
+        fetchRealPlaylistsFromSupabase().then(res => {
+          if (res.length > 0) setPlaylists(res);
+        });
+      })
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, []);
 
   const getPlayerUrl = (screenId?: string, playlistId?: string): string => {
     if (typeof window === 'undefined') return '';
@@ -499,6 +603,11 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         duplicatePlaylist,
         toastMessage,
         showToast,
+        isSupabaseConnected,
+        isSyncingWithSupabase,
+        syncWithSupabase,
+        isSupabaseModalOpen,
+        setIsSupabaseModalOpen,
       }}
     >
       {children}

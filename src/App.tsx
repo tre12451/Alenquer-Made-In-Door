@@ -19,10 +19,19 @@ import { BranchesView } from './components/branches/BranchesView';
 import { UsersView } from './components/users/UsersView';
 import { SettingsView } from './components/settings/SettingsView';
 import { SharePlayerModal } from './components/player/SharePlayerModal';
+import { SupabaseSyncModal } from './components/sync/SupabaseSyncModal';
 import { Play, Tv, ExternalLink, Share2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { activeView, openPlayer, setActiveView, setShareModalScreen, screens } = useSignage();
+  const {
+    activeView,
+    openPlayer,
+    setActiveView,
+    setShareModalScreen,
+    screens,
+    isSupabaseModalOpen,
+    setIsSupabaseModalOpen,
+  } = useSignage();
 
   // 1. Full-screen Player Mode
   if (activeView === 'player') {
@@ -62,6 +71,9 @@ const AppContent: React.FC = () => {
 
           {/* Global Share Player / Connect TV Modal */}
           <SharePlayerModal />
+
+          {/* Supabase Database Sync Modal */}
+          <SupabaseSyncModal isOpen={isSupabaseModalOpen} onClose={() => setIsSupabaseModalOpen(false)} />
 
           {/* Floating Quick Player Launcher for easy switching */}
           <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">

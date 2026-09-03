@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Plus,
   Share2,
+  Database,
 } from 'lucide-react';
 import { useSignage } from '../../context/SignageContext';
 
@@ -33,6 +34,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     setIsAddScreenOpen,
     setIsUploadMediaOpen,
     setIsCreatePlaylistOpen,
+    isSupabaseConnected,
+    isSyncingWithSupabase,
+    setIsSupabaseModalOpen,
     branches,
     screens,
     toastMessage,
@@ -99,6 +103,32 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
         {/* Right Side: Quick Actions & Player Trigger */}
         <div className="flex items-center gap-2 lg:gap-3">
+          {/* Supabase Realtime Sync Button */}
+          <button
+            id="btn-header-supabase-sync"
+            onClick={() => setIsSupabaseModalOpen(true)}
+            title="Configurar e sincronizar com o banco de dados Supabase em tempo real"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all border cursor-pointer ${
+              isSupabaseConnected
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                : 'bg-[#121214] hover:bg-slate-800 border-indigo-500/30 text-indigo-300 hover:text-indigo-200'
+            }`}
+          >
+            <Database className={`w-3.5 h-3.5 ${isSupabaseConnected ? 'text-emerald-400' : 'text-indigo-400'}`} />
+            {isSyncingWithSupabase ? (
+              <span className="hidden sm:inline-flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando...
+              </span>
+            ) : isSupabaseConnected ? (
+              <span className="hidden sm:inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Dados Reais (Supabase)
+              </span>
+            ) : (
+              <span className="hidden sm:inline">Sincronizar Supabase</span>
+            )}
+          </button>
+
           {/* Offline-First Simulation Toggle */}
           <button
             id="btn-toggle-offline-simulation"
