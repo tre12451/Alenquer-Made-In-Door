@@ -12,6 +12,9 @@ import {
   ExternalLink,
   Plus,
   Share2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Database,
 } from 'lucide-react';
 import { useSignage } from '../../context/SignageContext';
 
@@ -24,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen =
   const {
     activeView,
     openPlayer,
+    openConnectScreen,
+    openConnectModalWithCode,
     setShareModalScreen,
     isSimulatingOffline,
     toggleSimulateOffline,
@@ -36,6 +41,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen =
     branches,
     screens,
     toastMessage,
+    isSupabaseConnected,
+    openSupabaseModal,
   } = useSignage();
 
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
@@ -74,11 +81,21 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen =
           <button
             id="btn-sidebar-toggle"
             onClick={onToggleSidebar}
-            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title={isSidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
-            aria-label="Alternar Menu Lateral"
+            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-[#141418] hover:bg-[#1f1f26] border border-slate-700/80 shadow-xs flex items-center gap-2 transition-all cursor-pointer group shrink-0"
+            title={isSidebarOpen ? "Ocultar menu lateral" : "Exibir menu lateral"}
+            aria-label={isSidebarOpen ? "Ocultar menu lateral" : "Exibir menu lateral"}
           >
-            <Menu className="w-5 h-5" />
+            {isSidebarOpen ? (
+              <>
+                <PanelLeftClose className="w-4 h-4 text-indigo-400 group-hover:scale-105 transition-transform" />
+                <span className="hidden sm:inline font-medium text-slate-300 group-hover:text-white">Ocultar Menu</span>
+              </>
+            ) : (
+              <>
+                <PanelLeftOpen className="w-4 h-4 text-emerald-400 group-hover:scale-105 transition-transform" />
+                <span className="hidden sm:inline font-semibold text-emerald-300 group-hover:text-emerald-200">Exibir Menu Lateral</span>
+              </>
+            )}
           </button>
 
           <div className="flex items-center gap-3 text-xs text-slate-400">
@@ -155,6 +172,23 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen =
             <Bell className="w-3.5 h-3.5" />
           </div>
 
+          {/* Supabase Full Sync Trigger Button */}
+          <button
+            id="btn-header-supabase-sync"
+            onClick={openSupabaseModal}
+            className={`px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              isSupabaseConnected
+                ? 'bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-300 border-emerald-500/30'
+                : 'bg-[#18181c] hover:bg-[#222228] text-slate-300 border-slate-700'
+            }`}
+            title="Sincronizar com Supabase (Mídias, Playlists, Vínculos e SQL)"
+          >
+            <Database className={`w-3.5 h-3.5 ${isSupabaseConnected ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
+            <span className="hidden lg:inline">
+              {isSupabaseConnected ? 'Supabase Conectado' : 'Sincronizar Supabase'}
+            </span>
+          </button>
+
           {/* Share Player Link */}
           <button
             id="btn-header-share-player"
@@ -163,6 +197,17 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen =
             title="Compartilhar Link do Player / Conectar Smart TV"
           >
             <Share2 className="w-4 h-4" />
+          </button>
+
+          {/* Connect Screen CTA (Opens Pairing / Connect Modal in Admin Panel) */}
+          <button
+            id="btn-header-connect-screen"
+            onClick={() => openConnectModalWithCode()}
+            className="px-3 py-2 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/40 text-emerald-300 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
+            title="Conectar e parear nova tela por Código PIN ou QR Code"
+          >
+            <Tv className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden md:inline">CONECTAR TELA</span>
           </button>
 
           {/* Primary CTA: ABRIR PLAYER (NOVA GUIA) */}

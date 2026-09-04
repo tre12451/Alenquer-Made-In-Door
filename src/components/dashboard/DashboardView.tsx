@@ -26,6 +26,7 @@ export const DashboardView: React.FC = () => {
     media,
     playlists,
     openPlayer,
+    openConnectScreen,
     setShareModalScreen,
     setSelectedScreenForDetails,
     setActiveView,
@@ -443,14 +444,14 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-xs text-indigo-300 flex items-center justify-between">
-            <span className="font-medium">Cadastrar nova tela?</span>
+          <div className="p-3.5 rounded-lg bg-emerald-600/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
+            <span className="font-medium">Cadastrar nova tela / TV?</span>
             <button
               id="btn-goto-pairing-screen"
-              onClick={() => setActiveView('pair')}
-              className="font-bold text-white hover:text-indigo-200 underline"
+              onClick={() => openConnectScreen()}
+              className="font-bold text-white hover:text-emerald-200 underline cursor-pointer"
             >
-              Parear TV
+              CONECTAR TELA
             </button>
           </div>
         </div>

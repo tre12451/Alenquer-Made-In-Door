@@ -1,4 +1,4 @@
--- ==============================================================================
+export const SUPABASE_COMPLETE_SQL_SCHEMA = `-- ==============================================================================
 -- MEDIAHUB DIGITAL SIGNAGE - SCHEMA SQL COMPLETO PARA O SUPABASE
 -- PostgreSQL com Suporte Completo a Mídias, Playlists, Vínculos e Telas
 -- Totalmente Idempotente: pode ser executado várias vezes sem erros.
@@ -441,7 +441,4 @@ INSERT INTO emergency_broadcasts (id, is_active, title, message, type, banner_co
 ON CONFLICT (id) DO UPDATE SET
   title = EXCLUDED.title,
   message = EXCLUDED.message;
-
--- ==============================================================================
--- FIM DO SCRIPT - O banco está 100% pronto, vinculado e com mídias sincronizadas!
--- ==============================================================================
+`;

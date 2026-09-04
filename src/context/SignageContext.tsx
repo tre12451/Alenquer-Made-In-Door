@@ -29,7 +29,15 @@ import {
   fetchRealMediaFromSupabase,
   fetchRealPlaylistsFromSupabase,
   fetchRealEmergencyFromSupabase,
+  uploadLocalDataToSupabase,
 } from '../lib/supabase';
+import {
+  getOfficialPlayerUrl as getOfficialUrlHelper,
+  getDisplayPlayerUrl as getDisplayUrlHelper,
+  getRuntimePlayerUrl as getRuntimeUrlHelper,
+  getScreenSlug,
+  slugify,
+} from '../lib/slug';
 
 export type ActiveView =
   | 'dashboard'
@@ -67,13 +75,17 @@ interface SignageContextType {
   triggerEmergency: (title: string, message: string, type: EmergencyBroadcast['type'], soundAlert: boolean) => void;
   clearEmergency: () => void;
   
-  // Player state
+  // Player state & URL routing
   playerScreenId: string;
   playerPlaylistId: string;
   openPlayer: (screenId?: string, playlistId?: string) => void;
   openPlayerInNewTab: (screenId?: string, playlistId?: string) => void;
   copyPlayerLink: (screenId?: string, playlistId?: string) => void;
   getPlayerUrl: (screenId?: string, playlistId?: string) => string;
+  getOfficialPlayerUrl: (screenId?: string) => string;
+  getDisplayPlayerUrl: (screenId?: string) => string;
+  getRuntimePlayerUrl: (screenId?: string, playlistId?: string) => string;
+  updateScreenSlug: (screenId: string, slug: string) => void;
   shareModalScreen: ScreenDevice | null;
   setShareModalScreen: (screen: ScreenDevice | null) => void;
   exitPlayer: () => void;
@@ -110,16 +122,28 @@ interface SignageContextType {
   toastMessage: string | null;
   showToast: (msg: string) => void;
 
+  // Connect / Pairing Screen in New Tab & Modal
+  openConnectScreen: (playlistId?: string) => void;
+  getPairingUrl: (playlistId?: string) => string;
+  isConnectScreenModalOpen: boolean;
+  setIsConnectScreenModalOpen: (open: boolean) => void;
+  connectScreenInitialCode: string;
+  openConnectModalWithCode: (code?: string) => void;
+
   // Supabase Real-time Sync
   isSupabaseConnected: boolean;
   isSyncingWithSupabase: boolean;
+  isSupabaseModalOpen: boolean;
+  setIsSupabaseModalOpen: (open: boolean) => void;
+  openSupabaseModal: () => void;
   syncWithSupabase: () => Promise<void>;
+  uploadAllToSupabase: () => Promise<{ success: boolean; message: string; stats?: any }>;
 }
 
 const SignageContext = createContext<SignageContextType | undefined>(undefined);
 
 export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Check URL params on initial load
+  // Check URL params and pathname on initial load
   const getInitialView = (): ActiveView => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -131,6 +155,13 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (view === 'pair' || params.get('pair') === 'true') {
         return 'pair';
       }
+
+      // Check if pathname is a direct screen access route (e.g. login.com.br/nomedatela or /nomedatela)
+      const pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
+      const reservedPaths = ['', 'index.html', 'dashboard', 'admin', 'login', 'api'];
+      if (pathname && !reservedPaths.includes(pathname.toLowerCase())) {
+        return 'player';
+      }
     }
     return 'dashboard';
   };
@@ -140,6 +171,19 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const params = new URLSearchParams(window.location.search);
       const scr = params.get('screen') || params.get('screenId');
       if (scr) return scr;
+
+      // Check pathname (e.g. /nomedatela or /entrada-principal)
+      const pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
+      const reservedPaths = ['', 'index.html', 'dashboard', 'admin', 'login', 'api'];
+      if (pathname && !reservedPaths.includes(pathname.toLowerCase())) {
+        const found = INITIAL_SCREENS.find(
+          s => s.slug?.toLowerCase() === pathname.toLowerCase() ||
+               s.code?.toLowerCase() === pathname.toLowerCase() ||
+               s.id?.toLowerCase() === pathname.toLowerCase()
+        );
+        if (found) return found.id;
+        return pathname;
+      }
     }
     return 'scr-1';
   };
@@ -177,9 +221,34 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isAddScreenOpen, setIsAddScreenOpen] = useState<boolean>(false);
   const [isUploadMediaOpen, setIsUploadMediaOpen] = useState<boolean>(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState<boolean>(false);
+  // Connect / Parear Tela Modal state
+  const [isConnectScreenModalOpen, setIsConnectScreenModalOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('openConnectModal') === 'true' || !!params.get('code');
+    }
+    return false;
+  });
+  const [connectScreenInitialCode, setConnectScreenInitialCode] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('code') || '';
+    }
+    return '';
+  });
+
+  const openConnectModalWithCode = (code?: string) => {
+    setConnectScreenInitialCode(code || '');
+    setIsConnectScreenModalOpen(true);
+  };
   // Supabase connection state
   const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
   const [isSyncingWithSupabase, setIsSyncingWithSupabase] = useState<boolean>(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
+
+  const openSupabaseModal = () => {
+    setIsSupabaseModalOpen(true);
+  };
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -284,6 +353,26 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const uploadAllToSupabase = async () => {
+    setIsSyncingWithSupabase(true);
+    try {
+      const res = await uploadLocalDataToSupabase(screens, media, playlists, branches);
+      if (res.success) {
+        showToast(res.message);
+        await syncWithSupabase();
+      } else {
+        showToast(`⚠️ ${res.message}`);
+      }
+      return res;
+    } catch (err: any) {
+      const msg = err.message || 'Falha ao sincronizar com Supabase.';
+      showToast(`⚠️ ${msg}`);
+      return { success: false, message: msg };
+    } finally {
+      setIsSyncingWithSupabase(false);
+    }
+  };
+
   // On mount: check credentials and connect
   useEffect(() => {
     const creds = getSupabaseCredentials();
@@ -319,44 +408,83 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  const getPlayerUrl = (screenId?: string, playlistId?: string): string => {
-    if (typeof window === 'undefined') return '';
-    const base = window.location.origin + window.location.pathname;
-    const targetScreen = screenId || playerScreenId || 'scr-1';
+  const findScreen = (screenId?: string) => {
+    const target = screenId || playerScreenId || 'scr-1';
+    return screens.find(s => s.id === target || s.slug === target || s.code === target);
+  };
+
+  const getOfficialPlayerUrl = (screenId?: string): string => {
+    const screen = findScreen(screenId);
+    return getOfficialUrlHelper(screen || screenId, true);
+  };
+
+  const getDisplayPlayerUrl = (screenId?: string): string => {
+    const screen = findScreen(screenId);
+    return getDisplayUrlHelper(screen || screenId);
+  };
+
+  const getRuntimePlayerUrl = (screenId?: string, playlistId?: string): string => {
+    const targetScreen = findScreen(screenId);
+    const targetScreenId = targetScreen?.id || screenId || playerScreenId || 'scr-1';
     const targetPlaylist = playlistId || playerPlaylistId;
-    const url = new URL(base);
-    url.searchParams.set('view', 'player');
-    if (targetScreen) url.searchParams.set('screen', targetScreen);
-    if (targetPlaylist) url.searchParams.set('playlist', targetPlaylist);
-    return url.toString();
+    const slug = getScreenSlug(targetScreen || targetScreenId);
+    return getRuntimeUrlHelper(targetScreenId, targetPlaylist, slug);
+  };
+
+  const getPlayerUrl = (screenId?: string, _playlistId?: string): string => {
+    // Official Access page requested by user: login.com.br/nomedatela
+    return getOfficialPlayerUrl(screenId);
   };
 
   const openPlayerInNewTab = (screenId?: string, playlistId?: string) => {
     if (screenId) setPlayerScreenId(screenId);
     if (playlistId) setPlayerPlaylistId(playlistId);
-    const url = getPlayerUrl(screenId, playlistId);
+    // Opens in current runtime host so preview immediately displays player
+    const url = getRuntimePlayerUrl(screenId, playlistId);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const copyPlayerLink = (screenId?: string, playlistId?: string) => {
-    const url = getPlayerUrl(screenId, playlistId);
+  const copyPlayerLink = (screenId?: string, _playlistId?: string) => {
+    const officialUrl = getOfficialPlayerUrl(screenId);
+    const displayUrl = getDisplayPlayerUrl(screenId);
     if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(url)
+      navigator.clipboard.writeText(officialUrl)
         .then(() => {
-          showToast('🔗 Link do player copiado! Cole no navegador de qualquer TV ou dispositivo.');
+          showToast(`🔗 Link oficial do player copiado: ${displayUrl}`);
         })
         .catch(() => {
-          showToast(`Link do player: ${url}`);
+          showToast(`Link do player: ${displayUrl}`);
         });
     } else {
-      showToast(`Link do player: ${url}`);
+      showToast(`Link do player: ${displayUrl}`);
     }
+  };
+
+  const updateScreenSlug = (screenId: string, rawSlug: string) => {
+    const cleaned = slugify(rawSlug);
+    setScreens(prev => prev.map(s => s.id === screenId ? { ...s, slug: cleaned } : s));
+    showToast(`Slug da tela atualizado para: ${cleaned}`);
   };
 
   const openPlayer = (screenId?: string, playlistId?: string) => {
     if (screenId) setPlayerScreenId(screenId);
     if (playlistId) setPlayerPlaylistId(playlistId);
     openPlayerInNewTab(screenId, playlistId);
+  };
+
+  const getPairingUrl = (playlistId?: string): string => {
+    if (typeof window === 'undefined') return '';
+    const base = window.location.origin + window.location.pathname;
+    const targetPlaylist = playlistId || playerPlaylistId;
+    const url = new URL(base);
+    url.searchParams.set('view', 'pair');
+    if (targetPlaylist) url.searchParams.set('playlist', targetPlaylist);
+    return url.toString();
+  };
+
+  const openConnectScreen = (playlistId?: string) => {
+    const url = getPairingUrl(playlistId);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const exitPlayer = () => {
@@ -471,9 +599,31 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     showToast('Configurações da tela atualizadas.');
   };
 
-  const deleteScreen = (id: string) => {
+  const deleteScreen = async (id: string) => {
+    const targetScreen = screens.find(s => s.id === id);
+    const screenName = targetScreen ? targetScreen.name : 'Tela';
     setScreens(prev => prev.filter(s => s.id !== id));
-    showToast('Tela removida do sistema.');
+    showToast(`Tela "${screenName}" excluída com sucesso.`);
+
+    const newLog: AuditLog = {
+      id: `log-${Date.now()}`,
+      user: 'Administrador',
+      action: 'Excluiu Tela',
+      target: screenName,
+      timestamp: 'Agora mesmo',
+    };
+    setLogs(prev => [newLog, ...prev]);
+
+    if (isSupabaseConnected) {
+      try {
+        const client = getSupabaseClient();
+        if (client) {
+          await client.from('screens').delete().eq('id', id);
+        }
+      } catch (err) {
+        console.error('Erro ao deletar tela no Supabase:', err);
+      }
+    }
   };
 
   const addMedia = (item: Partial<MediaItem>) => {
@@ -567,6 +717,10 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         openPlayerInNewTab,
         copyPlayerLink,
         getPlayerUrl,
+        getOfficialPlayerUrl,
+        getDisplayPlayerUrl,
+        getRuntimePlayerUrl,
+        updateScreenSlug,
         shareModalScreen,
         setShareModalScreen,
         exitPlayer,
@@ -596,9 +750,19 @@ export const SignageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         duplicatePlaylist,
         toastMessage,
         showToast,
+        openConnectScreen,
+        getPairingUrl,
+        isConnectScreenModalOpen,
+        setIsConnectScreenModalOpen,
+        connectScreenInitialCode,
+        openConnectModalWithCode,
         isSupabaseConnected,
         isSyncingWithSupabase,
+        isSupabaseModalOpen,
+        setIsSupabaseModalOpen,
+        openSupabaseModal,
         syncWithSupabase,
+        uploadAllToSupabase,
       }}
     >
       {children}

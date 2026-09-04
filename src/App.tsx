@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SignageProvider, useSignage } from './context/SignageContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -20,18 +20,43 @@ import { UsersView } from './components/users/UsersView';
 import { SettingsView } from './components/settings/SettingsView';
 import { SharePlayerModal } from './components/player/SharePlayerModal';
 import { SupabaseSyncModal } from './components/sync/SupabaseSyncModal';
-import { Play, Tv, ExternalLink, Share2 } from 'lucide-react';
+import { ConnectScreenModal } from './components/screens/ConnectScreenModal';
+import { Play, Tv, ExternalLink, Share2, PanelLeftOpen } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const {
     activeView,
     openPlayer,
+    openConnectScreen,
+    openConnectModalWithCode,
+    isConnectScreenModalOpen,
+    setIsConnectScreenModalOpen,
+    connectScreenInitialCode,
     setActiveView,
     setShareModalScreen,
     screens,
     isSupabaseModalOpen,
     setIsSupabaseModalOpen,
   } = useSignage();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('mediahub_sidebar_open');
+      if (stored !== null) return stored === 'true';
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prev => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mediahub_sidebar_open', String(next));
+      }
+      return next;
+    });
+  };
 
   // 1. Full-screen Player Mode
   if (activeView === 'player') {
@@ -47,11 +72,25 @@ const AppContent: React.FC = () => {
   return (
     <div id="admin-shell-root" className="min-h-screen bg-[#09090b] text-slate-100 flex font-sans antialiased selection:bg-indigo-600/30 selection:text-indigo-200">
       {/* Navigation Sidebar */}
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+      {/* Floating button to show sidebar if closed */}
+      {!isSidebarOpen && (
+        <button
+          id="btn-floating-open-sidebar"
+          onClick={toggleSidebar}
+          className="fixed left-0 top-20 z-40 bg-[#121214]/95 hover:bg-[#1f1f26] border border-l-0 border-indigo-500/40 text-slate-200 hover:text-white px-2.5 py-2 rounded-r-lg shadow-2xl flex items-center gap-2 text-xs font-semibold cursor-pointer group transition-all"
+          title="Exibir Menu Lateral"
+          aria-label="Exibir Menu Lateral"
+        >
+          <PanelLeftOpen className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[11px] hidden sm:inline text-indigo-200 font-medium">Exibir Menu</span>
+        </button>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#09090b]">
-        <Header />
+        <Header onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
 
         <main className="flex-1 overflow-y-auto bg-[#09090b] relative pb-16">
           {activeView === 'dashboard' && <DashboardView />}
@@ -69,24 +108,34 @@ const AppContent: React.FC = () => {
           {activeView === 'users' && <UsersView />}
           {activeView === 'settings' && <SettingsView />}
 
+          {/* Global Connect Screen PIN/QR Modal */}
+          <ConnectScreenModal
+            isOpen={isConnectScreenModalOpen}
+            onClose={() => setIsConnectScreenModalOpen(false)}
+            initialCode={connectScreenInitialCode}
+          />
+
           {/* Global Share Player / Connect TV Modal */}
           <SharePlayerModal />
 
-          {/* Supabase Database Sync Modal */}
-          <SupabaseSyncModal isOpen={isSupabaseModalOpen} onClose={() => setIsSupabaseModalOpen(false)} />
+          {/* Supabase Full Sync & SQL Modal */}
+          <SupabaseSyncModal
+            isOpen={isSupabaseModalOpen}
+            onClose={() => setIsSupabaseModalOpen(false)}
+          />
 
           {/* Floating Quick Player Launcher for easy switching */}
           <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
             <button
               id="btn-floating-pair-mode"
-              onClick={() => setActiveView('pair')}
+              onClick={() => openConnectModalWithCode()}
               className="px-3.5 py-2 rounded-md bg-[#121214] hover:bg-[#1a1a1e] text-slate-300 border border-slate-800 text-xs font-semibold shadow-xl flex items-center gap-2 transition-all backdrop-blur-md cursor-pointer"
-              title="Abrir tela de pareamento de nova TV"
+              title="Conectar e parear nova tela por código PIN ou QR Code"
             >
-              <div className="w-3.5 h-3.5 border border-indigo-400 rounded-xs flex items-center justify-center">
-                <Tv className="w-2.5 h-2.5 text-indigo-400" />
+              <div className="w-3.5 h-3.5 border border-emerald-400 rounded-xs flex items-center justify-center">
+                <Tv className="w-2.5 h-2.5 text-emerald-400" />
               </div>
-              <span className="hidden sm:inline">Modo Parear TV</span>
+              <span className="hidden sm:inline">CONECTAR TELA</span>
             </button>
 
             <button

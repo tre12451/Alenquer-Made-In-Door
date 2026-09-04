@@ -249,6 +249,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-1',
     name: 'TV 01 — Loja Centro Entrada Principal',
+    slug: 'entrada-principal',
     code: 'MH-9021',
     branchId: 'b-centro',
     branchName: 'Loja Centro (Hipermercado)',
@@ -278,6 +279,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-2',
     name: 'TV 02 — Loja Centro Setor Açougue',
+    slug: 'acougue-cortes',
     code: 'MH-9022',
     branchId: 'b-centro',
     branchName: 'Loja Centro (Hipermercado)',
@@ -307,6 +309,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-3',
     name: 'TV 03 — Loja Norte Setor Hortifrúti',
+    slug: 'hortifruti',
     code: 'MH-9031',
     branchId: 'b-norte',
     branchName: 'Loja Zona Norte',
@@ -336,6 +339,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-4',
     name: 'TV 04 — Loja Centro Linha de Caixas 01-08',
+    slug: 'linha-caixas',
     code: 'MH-9024',
     branchId: 'b-centro',
     branchName: 'Loja Centro (Hipermercado)',
@@ -365,6 +369,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-5',
     name: 'Totem Vertical 01 — Shopping Morumbi Piso L1',
+    slug: 'totem-shopping-l1',
     code: 'MH-7710',
     branchId: 'b-shopping',
     branchName: 'Shopping Morumbi Totens',
@@ -394,6 +399,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-6',
     name: 'Totem Vertical 02 — Shopping Morumbi Praça',
+    slug: 'totem-shopping-praca',
     code: 'MH-7711',
     branchId: 'b-shopping',
     branchName: 'Shopping Morumbi Totens',
@@ -423,6 +429,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-7',
     name: 'TV 05 — Matriz Recepção Executiva',
+    slug: 'recepcao-matriz',
     code: 'MH-5001',
     branchId: 'b-matriz',
     branchName: 'Matriz Corporativa',
@@ -452,6 +459,7 @@ export const INITIAL_SCREENS: ScreenDevice[] = [
   {
     id: 'scr-8',
     name: 'TV 06 — Matriz Refeitório Colaboradores',
+    slug: 'refeitorio-matriz',
     code: 'MH-5002',
     branchId: 'b-matriz',
     branchName: 'Matriz Corporativa',

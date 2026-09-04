@@ -16,6 +16,7 @@ import {
   Filter,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   MoreVertical,
   QrCode,
   Smartphone,
@@ -24,9 +25,11 @@ import {
   X,
   Share2,
   Copy,
+  Globe,
 } from 'lucide-react';
 import { useSignage } from '../../context/SignageContext';
 import { ScreenDevice, ScreenOrientation } from '../../types';
+import { getScreenSlug } from '../../lib/slug';
 
 export const ScreensView: React.FC = () => {
   const {
@@ -34,6 +37,8 @@ export const ScreensView: React.FC = () => {
     playlists,
     branches,
     openPlayer,
+    openConnectScreen,
+    openConnectModalWithCode,
     setShareModalScreen,
     copyPlayerLink,
     isAddScreenOpen,
@@ -51,6 +56,7 @@ export const ScreensView: React.FC = () => {
   const [filterBranch, setFilterBranch] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [screenToDelete, setScreenToDelete] = useState<ScreenDevice | null>(null);
 
   // Add Screen Modal form state
   const [newScreenName, setNewScreenName] = useState('');
@@ -102,17 +108,25 @@ export const ScreensView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
-            id="btn-add-screen-modal-trigger"
-            onClick={() => {
-              setPairingCodeInput(`MH-${Math.floor(1000 + Math.random() * 9000)}`);
-              setIsAddScreenOpen(true);
-            }}
-            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-md shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            id="btn-connect-screen-trigger"
+            onClick={() => openConnectModalWithCode()}
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-md shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            title="Conectar tela pelo código PIN ou lendo QR Code e vincular playlist com reprodução imediata"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Adicionar / Parear Tela</span>
+            <Tv className="w-4 h-4" />
+            <span>CONECTAR NOVA TELA</span>
+          </button>
+
+          <button
+            id="btn-open-terminal-tab"
+            onClick={() => openConnectScreen()}
+            className="hidden sm:flex px-3 py-2 bg-[#18181c] hover:bg-[#202026] text-slate-300 border border-slate-800 text-xs font-medium rounded-md items-center gap-1.5 transition-colors cursor-pointer"
+            title="Abrir tela de pareamento / TV em nova guia para gerar código PIN"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Gerar Código na TV</span>
           </button>
         </div>
       </div>
@@ -266,6 +280,25 @@ export const ScreensView: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Direct Player URL Pill (login.com.br/nomedatela) */}
+                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0c0c0e] border border-slate-800/80 text-[11px] font-mono text-emerald-400">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span className="truncate">login.com.br/{getScreenSlug(scr)}</span>
+                  </div>
+                  <button
+                    id={`btn-copy-slug-card-${scr.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyPlayerLink(scr.id, scr.currentPlaylistId);
+                    }}
+                    className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-emerald-300 transition-colors shrink-0 ml-1 cursor-pointer"
+                    title="Copiar link oficial do player (login.com.br/...)"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+
                 {/* Hardware telemetry chips */}
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center text-[10px] text-slate-400 font-mono">
                   <div className="p-1.5 rounded-md bg-[#0c0c0e] border border-slate-800/60">
@@ -310,10 +343,21 @@ export const ScreensView: React.FC = () => {
                   <button
                     id={`btn-card-share-player-${scr.id}`}
                     onClick={() => setShareModalScreen(scr)}
-                    className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-colors"
+                    className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
                     title="Compartilhar link do player para TV ou outro dispositivo"
                   >
                     <Share2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    id={`btn-card-delete-screen-${scr.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setScreenToDelete(scr);
+                    }}
+                    className="p-1.5 rounded-md hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                    title="Excluir tela da rede"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -425,6 +469,41 @@ export const ScreensView: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Slug / Player URL Field */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Página de Acesso ao Player</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 font-mono">login.com.br/nomedatela</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-slate-500 select-none">login.com.br/</span>
+                    <input
+                      id="input-detail-screen-slug"
+                      type="text"
+                      value={selectedScreenForDetails.slug || ''}
+                      onChange={e =>
+                        updateScreen(selectedScreenForDetails.id, {
+                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-'),
+                        })
+                      }
+                      placeholder="nomedatela"
+                      className="flex-1 px-3 py-1.5 rounded-md bg-[#18181b] border border-slate-700 text-emerald-300 font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      id="btn-copy-slug-from-detail"
+                      type="button"
+                      onClick={() => copyPlayerLink(selectedScreenForDetails.id, selectedScreenForDetails.currentPlaylistId)}
+                      className="p-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center justify-center cursor-pointer"
+                      title="Copiar link oficial do player"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-emerald-400" />
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">
                     Orientação da Tela
@@ -486,14 +565,12 @@ export const ScreensView: React.FC = () => {
             {/* Actions Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
               <button
+                type="button"
                 id="btn-delete-screen"
                 onClick={() => {
-                  if (confirm(`Tem certeza que deseja remover ${selectedScreenForDetails.name}?`)) {
-                    deleteScreen(selectedScreenForDetails.id);
-                    setSelectedScreenForDetails(null);
-                  }
+                  setScreenToDelete(selectedScreenForDetails);
                 }}
-                className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1.5"
+                className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1.5 cursor-pointer py-1.5 px-2.5 rounded-md hover:bg-rose-500/10 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Excluir Tela</span>
@@ -559,10 +636,10 @@ export const ScreensView: React.FC = () => {
             <div className="flex items-start justify-between pb-3 border-b border-slate-800">
               <div>
                 <h3 className="text-lg font-bold text-slate-100 font-['Space_Grotesk']">
-                  Parear Nova Tela / TV
+                  Conectar Nova Tela / TV
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Informe o código de pareamento exibido no player da TV
+                  Informe o código de conexão exibido na tela ou no QR Code
                 </p>
               </div>
               <button
@@ -675,10 +752,110 @@ export const ScreensView: React.FC = () => {
                   id="btn-submit-add-screen"
                   className="px-5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md cursor-pointer"
                 >
-                  Parear e Ativar Tela
+                  Conectar e Ativar Tela
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão no Próprio App (NÃO USA ALERT DO NAVEGADOR) */}
+      {screenToDelete && (
+        <div
+          id="modal-confirm-delete-screen"
+          className="fixed inset-0 z-60 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setScreenToDelete(null)}
+        >
+          <div
+            className="bg-[#121214] border border-rose-900/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header de Exclusão */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0 text-rose-400">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 flex-1">
+                <h3 className="text-lg font-bold text-slate-100 font-['Space_Grotesk']">
+                  Excluir Tela Definitivamente?
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Esta ação desvinculará a tela do sistema e interromperá a exibição.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="btn-close-delete-modal-x"
+                onClick={() => setScreenToDelete(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Informações da Tela Selecionada */}
+            <div className="p-3.5 rounded-xl bg-[#18181b] border border-slate-800 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Nome:</span>
+                <span className="font-semibold text-white truncate max-w-[220px]">
+                  {screenToDelete.name}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Código PIN:</span>
+                <span className="font-mono font-bold text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40">
+                  {screenToDelete.code}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Localização:</span>
+                <span className="text-slate-300">
+                  {screenToDelete.environment} • {screenToDelete.branchName}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Endereço Player:</span>
+                <span className="font-mono text-emerald-400">
+                  login.com.br/{getScreenSlug(screenToDelete)}
+                </span>
+              </div>
+            </div>
+
+            {/* Alerta explicativo */}
+            <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-900/30 text-[11px] text-rose-300 leading-relaxed flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+              <span>
+                Para reconectar este terminal no futuro, será necessário cadastrar o código de pareamento novamente.
+              </span>
+            </div>
+
+            {/* Botões do próprio App */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                id="btn-cancel-delete-screen"
+                onClick={() => setScreenToDelete(null)}
+                className="px-4 py-2.5 rounded-lg bg-[#1c1c20] hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-delete-screen"
+                onClick={() => {
+                  deleteScreen(screenToDelete.id);
+                  if (selectedScreenForDetails?.id === screenToDelete.id) {
+                    setSelectedScreenForDetails(null);
+                  }
+                  setScreenToDelete(null);
+                }}
+                className="px-4 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-950/40 flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Sim, Excluir Tela</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

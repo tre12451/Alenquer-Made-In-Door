@@ -8,6 +8,7 @@ export type UserRole = 'ADMINISTRADOR' | 'GERENTE' | 'EDITOR' | 'OPERADOR' | 'VI
 export interface ScreenDevice {
   id: string;
   name: string;
+  slug?: string;
   code: string;
   branchId: string;
   branchName: string;

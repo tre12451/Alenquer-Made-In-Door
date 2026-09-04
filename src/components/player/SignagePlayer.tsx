@@ -12,9 +12,11 @@ import {
   Volume2,
   VolumeX,
   SkipForward,
+  Globe,
 } from 'lucide-react';
 import { useSignage } from '../../context/SignageContext';
 import { PlaylistItem, MediaItem } from '../../types';
+import { getScreenSlug } from '../../lib/slug';
 
 export const SignagePlayer: React.FC = () => {
   const {
@@ -28,7 +30,11 @@ export const SignagePlayer: React.FC = () => {
   } = useSignage();
 
   // Find target screen and playlist
-  const currentScreen = screens.find(s => s.id === playerScreenId) || screens[0];
+  const currentScreen = screens.find(
+    s => s.id === playerScreenId ||
+         s.slug?.toLowerCase() === playerScreenId?.toLowerCase() ||
+         s.code?.toLowerCase() === playerScreenId?.toLowerCase()
+  ) || screens[0];
   const currentPlaylist = playlists.find(p => p.id === playerPlaylistId) || playlists[0];
 
   const items = currentPlaylist.items || [];
@@ -514,8 +520,12 @@ export const SignagePlayer: React.FC = () => {
             <p className="text-xs font-semibold text-white truncate max-w-xs md:max-w-md">
               {currentMedia?.title || 'Reprodução Digital Signage'}
             </p>
-            <p className="text-[11px] text-neutral-400">
-              {currentScreen.name} • {currentPlaylist.name} ({currentIndex + 1}/{items.length || 1})
+            <p className="text-[11px] text-neutral-400 flex items-center gap-2">
+              <span>{currentScreen.name} • {currentPlaylist.name} ({currentIndex + 1}/{items.length || 1})</span>
+              <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                <Globe className="w-2.5 h-2.5" />
+                <span>login.com.br/{getScreenSlug(currentScreen)}</span>
+              </span>
             </p>
           </div>
         </div>

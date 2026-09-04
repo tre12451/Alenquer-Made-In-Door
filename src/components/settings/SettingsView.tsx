@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { HardDrive, Shield, Palette, CheckCircle2, Save, Wifi } from 'lucide-react';
+import { HardDrive, Shield, Palette, CheckCircle2, Save, Wifi, Sliders, Database, Radio, Code2, Sparkles } from 'lucide-react';
 import { useSignage } from '../../context/SignageContext';
 
 export const SettingsView: React.FC = () => {
-  const { isSimulatingOffline, toggleSimulateOffline } = useSignage();
+  const {
+    isSimulatingOffline,
+    toggleSimulateOffline,
+    openSupabaseModal,
+    isSupabaseConnected,
+    screens,
+    media,
+    playlists,
+  } = useSignage();
 
   const [saved, setSaved] = useState(false);
   const [cacheLimit, setCacheLimit] = useState('16');
@@ -171,6 +179,63 @@ export const SettingsView: React.FC = () => {
                 defaultValue="Rede Floriano Supermercados"
                 className="w-full px-3 py-2 rounded-md bg-[#18181b] border border-slate-800 text-slate-100 focus:outline-none focus:border-slate-600"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Banco de Dados & Supabase Realtime */}
+        <div className="md:col-span-2 p-6 rounded-xl bg-gradient-to-r from-emerald-950/20 via-[#121214] to-[#121214] border border-slate-800 space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <Database className="w-5 h-5" />
+              <div>
+                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 font-['Space_Grotesk']">
+                  Banco de Dados Supabase (PostgreSQL & Realtime)
+                  {isSupabaseConnected ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      <Radio className="w-2.5 h-2.5 animate-pulse" /> Conectado em Tempo Real
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-normal text-slate-400">
+                      (Modo Local Ativo)
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Sincronização total de mídias, playlists, telas com slugs e auditoria de integridade de vínculos relacionais.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                id="btn-settings-open-supabase"
+                onClick={openSupabaseModal}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-900/20 flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Sincronizar no Agora Total / Ver SQL</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+            <div className="p-3 rounded-lg bg-[#18181b] border border-slate-800">
+              <span className="text-slate-400 block text-[11px]">Mídias Catalogadas</span>
+              <strong className="text-sm font-semibold text-white">{media.length} itens</strong>
+            </div>
+            <div className="p-3 rounded-lg bg-[#18181b] border border-slate-800">
+              <span className="text-slate-400 block text-[11px]">Playlists Ativas</span>
+              <strong className="text-sm font-semibold text-white">{playlists.length} sequências</strong>
+            </div>
+            <div className="p-3 rounded-lg bg-[#18181b] border border-slate-800">
+              <span className="text-slate-400 block text-[11px]">Telas com Slugs</span>
+              <strong className="text-sm font-semibold text-white">{screens.length} terminais</strong>
+            </div>
+            <div className="p-3 rounded-lg bg-[#18181b] border border-slate-800">
+              <span className="text-slate-400 block text-[11px]">Acesso ao Player</span>
+              <strong className="text-xs font-mono text-emerald-400 truncate block">login.com.br/nomedatela</strong>
             </div>
           </div>
         </div>
